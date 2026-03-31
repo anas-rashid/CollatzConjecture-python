@@ -19,6 +19,48 @@ RED     = "#f38ba8"
 TEAL    = "#94e2d5"
 
 
+COLLATZ_TOOLTIP = (
+    "Collatz Conjecture\n"
+    "──────────────────\n"
+    "Given any positive integer x, apply repeatedly:\n\n"
+    "  • x is even  →  x = x / 2\n"
+    "  • x is odd   →  x = 3x + 1\n\n"
+    "The conjecture states that no matter which\n"
+    "starting value you choose, the sequence will\n"
+    "always eventually reach 1."
+)
+
+
+class Tooltip:
+    """Show a dark tooltip near a widget on hover."""
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self._widget = widget
+        self._text   = text
+        self._win: tk.Toplevel | None = None
+        widget.bind("<Enter>", self._show)
+        widget.bind("<Leave>", self._hide)
+
+    def _show(self, _event=None):
+        if self._win:
+            return
+        x = self._widget.winfo_rootx() + self._widget.winfo_width() + 6
+        y = self._widget.winfo_rooty()
+        self._win = tw = tk.Toplevel(self._widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            tw, text=self._text, justify=tk.LEFT,
+            bg=OVERLAY, fg=TEXT, font=("Consolas", 10),
+            relief=tk.FLAT, bd=0, padx=12, pady=10,
+        ).pack()
+
+    def _hide(self, _event=None):
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+
 def collatz_sequence(n: int) -> list[int]:
     seq = []
     while n != 1:
@@ -59,7 +101,7 @@ class CollatzApp(tk.Tk):
         super().__init__()
         self.title("Collatz Paradox")
         self.configure(bg=BG)
-        self.state("zoomed")
+        self.attributes("-zoomed", True)
 
         self.x: int = 10
         self.values: list[int] = []
@@ -129,6 +171,15 @@ class CollatzApp(tk.Tk):
         )
         combo.pack(side=tk.LEFT, padx=(0, 20), ipady=3)
         combo.bind("<<ComboboxSelected>>", lambda _e: self._plot())
+
+        # Info button with Collatz equation tooltip
+        info_btn = tk.Label(
+            ctrl, text=" ? ", bg=OVERLAY, fg=SUBTEXT,
+            font=("Segoe UI", 11, "bold"), cursor="question_arrow",
+            relief=tk.FLAT, padx=6, pady=4,
+        )
+        info_btn.pack(side=tk.LEFT, padx=(0, 10))
+        Tooltip(info_btn, COLLATZ_TOOLTIP)
 
         # Right-side buttons
         for label, cmd, color in [
